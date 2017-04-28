@@ -82,6 +82,7 @@ export default class Board extends React.PureComponent<Props, void> {
         <Background size={size} darkColor="#83ACBD" lightColor="#F3FAFF" />
         <Shadow
           ref = { (r: any) => this.shadow = r }
+          size = { sqSize * 2 }
         />
         { selected !== null ?
           <SquareLight light="selected" size={sqSize} boardKey={selected} /> :
@@ -155,6 +156,14 @@ export default class Board extends React.PureComponent<Props, void> {
           this.draggingPiece = p as PieceEl
           this.forceUpdate()
         }
+
+        // copy pasted curentShadow transform. TODO : Remove it
+        const { sqSize } = this.props
+        const posAux = util.key2Pos(key, sqSize)
+        const pos = { x: posAux.x - sqSize / 2,  y: posAux.y - sqSize / 2 }
+        if (this.shadow) {
+          this.shadow.openShadow(pos.x, pos.y)
+        }
       }
     }
   }
@@ -174,14 +183,10 @@ export default class Board extends React.PureComponent<Props, void> {
       const prevKey = this.dragOver
       this.dragOver = util.getKeyFromMoveEvent(gestureState, this.layout)
       if (this.shadow && prevKey !== this.dragOver) {
-        this.shadow.setNativeProps({
-          style: {
-            opacity: 1,
-            width: sqSize * 2,
-            height: sqSize * 2,
-            transform: this.getCurrentShadowTransform()
-          }
-        })
+        const pos = this.getCurrentShadowTransform()
+        if (pos !== undefined) {
+          this.shadow.moveTo(pos.x, pos.y)
+        }
       }
     }
   }
@@ -203,7 +208,7 @@ export default class Board extends React.PureComponent<Props, void> {
             transform: [{ translate: [ pos.x, pos.y ]}]
           }
         })
-        this.props.handlers.onMove(orig, dest, false)
+        requestAnimationFrame(() => this.props.handlers.onMove(orig, dest, false))
       } else {
         this.cancelDrag()
       }
@@ -213,6 +218,8 @@ export default class Board extends React.PureComponent<Props, void> {
     } else {
       this.cancelDrag()
     }
+
+    this.removeShadow()
   }
 
   private handlePanResponderTerminate = () => {
@@ -222,12 +229,7 @@ export default class Board extends React.PureComponent<Props, void> {
 
   private removeShadow() {
     if (this.shadow) {
-      this.shadow.setNativeProps({
-        style: {
-          // transform: [{ translate: [hiddenShadowPos.x, hiddenShadowPos.y] }]
-          opacity: 0
-        }
-      })
+      this.shadow.hide()
     }
   }
 
@@ -249,7 +251,7 @@ export default class Board extends React.PureComponent<Props, void> {
     const pos = this.dragOver !== null
       ? util.key2Pos(this.dragOver, sqSize)
       : null
-    return pos != null ? [{ translate: [pos.x - sqSize / 2, pos.y - sqSize / 2] }] : []
+    return pos != null ? { x: pos.x - sqSize / 2,  y: pos.y - sqSize / 2 } : undefined
   }
 }
 
