@@ -45,6 +45,7 @@ export default class App extends React.Component<void, BoardState> {
           handlers={this.boardHandlers}
           config={boardDefaultConf}
           size={screenWidth}
+          sqSize={screenWidth / 8}
         />
       </View>
     )

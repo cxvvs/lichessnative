@@ -18,6 +18,7 @@ import * as util from './util'
 import { BoardPiece, BoardPieces, Key } from './types'
 import { BoardConfig } from './config'
 import { BoardState } from './state'
+import Shadow from './Shadow'
 
 export interface BoardHandlers {
   onSelectSquare: (k: Key | null) => void
@@ -26,12 +27,12 @@ export interface BoardHandlers {
 
 interface Props {
   size: number
+  sqSize: number
   state: BoardState
   handlers: BoardHandlers
   config: BoardConfig
 }
 
-const hiddenShadowPos = { x: 999999, y: 999999 }
 // const MOVE_THRESHOLD = 2
 
 export default class Board extends React.PureComponent<Props, void> {
@@ -49,7 +50,7 @@ export default class Board extends React.PureComponent<Props, void> {
   // ref to the dragging piece
   private draggingPiece: PieceEl | null
   // ref to the shadow view element
-  private shadow?: View
+  private shadow?: Shadow
 
   constructor(props: Props) {
     super(props)
@@ -70,14 +71,8 @@ export default class Board extends React.PureComponent<Props, void> {
   }
 
   render() {
-    const { size } = this.props
+    const { size, sqSize } = this.props
     const { pieces, selected } = this.props.state
-    const sqSize = size / 8
-    const shadowStyle = {
-      width: sqSize * 2,
-      height: sqSize * 2,
-      transform: this.getCurrentShadowTransform()
-    }
     return (
       <View
         style={[styles.container, { width: size, height: size }]}
@@ -85,9 +80,8 @@ export default class Board extends React.PureComponent<Props, void> {
         {...this.panResponder.panHandlers}
       >
         <Background size={size} darkColor="#83ACBD" lightColor="#F3FAFF" />
-        <View
-          ref={(e: any) => { this.shadow = e }}
-          style={[styles.shadow, shadowStyle]}
+        <Shadow
+          ref = { (r: any) => this.shadow = r }
         />
         { selected !== null ?
           <SquareLight light="selected" size={sqSize} boardKey={selected} /> :
@@ -166,7 +160,7 @@ export default class Board extends React.PureComponent<Props, void> {
   }
 
   private handlePanResponderMove = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
-    const sqSize = this.props.size / 8
+    const { sqSize } = this.props
     if (this.draggingPiece) {
       this.draggingPiece.setNativeProps({
         style: {
@@ -182,6 +176,9 @@ export default class Board extends React.PureComponent<Props, void> {
       if (this.shadow && prevKey !== this.dragOver) {
         this.shadow.setNativeProps({
           style: {
+            opacity: 1,
+            width: sqSize * 2,
+            height: sqSize * 2,
             transform: this.getCurrentShadowTransform()
           }
         })
@@ -227,15 +224,17 @@ export default class Board extends React.PureComponent<Props, void> {
     if (this.shadow) {
       this.shadow.setNativeProps({
         style: {
-          transform: [{ translate: [hiddenShadowPos.x, hiddenShadowPos.y] }]
+          // transform: [{ translate: [hiddenShadowPos.x, hiddenShadowPos.y] }]
+          opacity: 0
         }
       })
     }
   }
 
   private cancelDrag() {
+    const { sqSize } = this.props
     if (this.draggingPiece) {
-      const pos = util.key2Pos(this.draggingPiece.props.boardKey, this.props.size / 8)
+      const pos = util.key2Pos(this.draggingPiece.props.boardKey, sqSize)
       this.draggingPiece.setNativeProps({
         style: {
           transform: [{ translate: [ pos.x, pos.y ]}]
@@ -246,9 +245,11 @@ export default class Board extends React.PureComponent<Props, void> {
   }
 
   private getCurrentShadowTransform() {
-    const sqSize = this.props.size / 8
-    const pos = this.dragOver !== null ? util.key2Pos(this.dragOver, sqSize) : hiddenShadowPos
-    return [{ translate: [pos.x - sqSize / 2, pos.y - sqSize / 2] }]
+    const { sqSize } = this.props
+    const pos = this.dragOver !== null
+      ? util.key2Pos(this.dragOver, sqSize)
+      : null
+    return pos != null ? [{ translate: [pos.x - sqSize / 2, pos.y - sqSize / 2] }] : []
   }
 }
 
